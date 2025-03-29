@@ -1,0 +1,63 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: chatgpt-clone-backend
+    env_file:
+      - .env # Load environment variables from .env file in the root
+    # Use environment section to override or provide defaults if needed
+    # environment:
+    #   - ROOT_PATH=/api # Ensure ROOT_PATH matches FastAPI app and Dockerfile CMD
+    volumes:
+      # Mount backend code for development with hot-reloading (optional)
+      # Note: Ensure the CMD in backend/Dockerfile uses '--reload'
+      - ./backend/app:/app/app
+      # Mount the root .env file directly into the container (alternative to env_file)
+      # - ./.env:/.env # If backend/main.py loads from /.env instead of ../../.env
+    ports:
+      - "8000:8000" # Map host port 8000 to container port 8000
+    networks:
+      - chat-network
+    # command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--root-path", "/api"] # Development CMD override
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: chatgpt-clone-frontend
+    # Pass the API base URL as a build argument AND an environment variable
+    # Build arg is used by Vite during build time (import.meta.env)
+    # Env var is used by serve at runtime (if needed, or for entrypoint scripts)
+    build:
+      context: ./frontend
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8000/api} # Default if not set in .env
+    environment:
+      # Ensure the variable is available at runtime if the container needs it (e.g., entrypoint script)
+      # The 'serve' command doesn't directly use this, but good practice.
+      - VITE_API_BASE_URL=${VITE_API_BASE_URL:-http://localhost:8000/api}
+      # Serve uses PORT env var to determine which port to listen on inside the container
+      - PORT=80
+    volumes:
+      # Mount frontend code for development with hot-reloading (optional)
+      # Requires running `npm run dev` inside the container or adjusting Dockerfile CMD
+      # - ./frontend/src:/app/src
+      # - ./frontend/public:/app/public
+      - frontend_node_modules:/app/node_modules # Persist node_modules
+    ports:
+      - "5173:80" # Map host port 5173 to container port 80 (where 'serve' listens)
+    depends_on:
+      - backend # Optional: ensures backend starts before frontend attempts connection (useful for health checks)
+    networks:
+      - chat-network
+    # command: ["npm", "run", "dev", "--", "--host"] # Development CMD override (listens on 0.0.0.0)
+
+networks:
+  chat-network:
+    driver: bridge
+
+volumes:
+  frontend_node_modules: # Persist node_modules across container rebuilds (useful for dev)
