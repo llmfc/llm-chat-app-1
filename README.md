@@ -12,6 +12,7 @@ Make sure to include deployment files as well.
 
 Style it a bit! I want nice CSS, to be almost exactly like ChatGPT. I know you're an artist, do something :D
 Also let customer select exact models: GPT 3.5, GPT 4.0, O1, LLama, Mistral, Gemini Flash 2.0, Gemini Pro 1.5 ...
+- I like red color
 
 Check OUTPUT.md for the complete unaltered output.
 
